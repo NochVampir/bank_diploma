@@ -14,6 +14,10 @@ const User = db.define('User', {
     amount: {
         type: DataTypes.STRING,
         defaultValue: "0"
+    },
+    refresh: {
+        type: DataTypes.STRING,
+        defaultValue: ''
     }
 })
 

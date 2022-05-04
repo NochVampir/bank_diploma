@@ -1,6 +1,6 @@
 const { Sequelize } = require('sequelize');
 
-const sequelize = new Sequelize("bank_diplom", "postgres", "1234", {
+const sequelize = new Sequelize("bank_diplom", "postgres", "0000", {
     dialect: "postgres"
 });
 

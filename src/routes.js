@@ -6,8 +6,59 @@ const {getMoneyObj} = require("./utils");
 const {db} = require("./db");
 const passport = require("passport");
 const jwt = require('jsonwebtoken');
+const dayjs = require('dayjs');
+const jwtDecode = require("jwt-decode");
 
 module.exports.initRoutes = (app) => {
+    app.get("/account/refresh", async (req, res) => {
+        const {
+            refreshToken
+        } = req.cookies;
+
+        try{
+            const decoded = jwtDecode(refreshToken)
+            const userDetails = await User.findByPk(decoded.id)
+
+            if(userDetails.refresh === refreshToken && await jwt.verify(refreshToken, 'secret')){
+                const token = jwt.sign({
+                    id: decoded.id
+                }, 'secret', {
+                    expiresIn: '15min'
+                })
+                const refreshToken = jwt.sign({
+                    id: decoded.id
+                }, 'secret', {
+                    expiresIn: '30days'
+                })
+
+                await User.update({
+                    refresh: refreshToken
+                }, {
+                    where: {
+                        id: decoded.id
+                    }
+                })
+
+                res.cookie("refreshToken", refreshToken, {
+                    secure: process.env.NODE_ENV !== "development",
+                    httpOnly: true,
+                    expires: dayjs().add(30, "days").toDate()
+                })
+                return res.send({
+                    accessToken: token
+                })
+            }
+        }catch (e) {
+            return res
+                .status(401)
+                .send({})
+        }
+
+        res
+            .status(401)
+            .send({})
+    })
+
     app.post("/account/login", async (req, res) => {
         passport.authenticate('local', {session: false}, (err, user, info) => {
             if(err || !user){
@@ -18,7 +69,7 @@ module.exports.initRoutes = (app) => {
                     })
             }
 
-            req.login(user, {session: false}, (err) => {
+            req.login(user, {session: false}, async (err) => {
                 if(err){
                     res
                         .status(500)
@@ -28,9 +79,28 @@ module.exports.initRoutes = (app) => {
 
                 const token = jwt.sign({
                     id: user.id
-                }, 'secret')
+                }, 'secret', {
+                    expiresIn: '15min'
+                })
+                const refreshToken = jwt.sign({
+                    id: user.id
+                }, 'secret', {
+                    expiresIn: '30days'
+                })
+                await User.update({
+                    refresh: refreshToken
+                },{
+                    where: {
+                        id: user.id
+                    }
+                })
+                res.cookie("refreshToken", refreshToken, {
+                    secure: process.env.NODE_ENV !== "development",
+                    httpOnly: true,
+                    expires: dayjs().add(30, "days").toDate()
+                })
                 res.send({
-                    token
+                    token,
                 })
             })
         })(req, res)
@@ -73,14 +143,20 @@ module.exports.initRoutes = (app) => {
                 }
             },
             attributes: {
-                exclude: ["password", "amount"]
+                exclude: ["password", "amount", "refresh"]
             }
         })
 
-        res.send({
-            data: usersList
+        res.send(usersList)
+
+    })
+
+    app.get("/account/details", passport.authenticate("jwt", {session: false}), async (req, res) => {
+        const userDetails = await User.findByPk(req.user.id, {
+            attributes: ["id", "nickname", "amount", "createdAt"]
         })
 
+        res.send(userDetails)
     })
 
     app.post("/transactions", passport.authenticate("jwt", {session: false}), async (req, res) => {
@@ -166,6 +242,17 @@ module.exports.initRoutes = (app) => {
 
     app.get("/transactions/:userId/list", passport.authenticate("jwt", {session: false}), async (req, res) => {
         const userId = req.params.userId
+        const sortName = req.query.sortName || 'createdAt'
+        const sortDir = req.query.sortDir || 'ASC'
+
+        if(req.user.id !== parseInt(userId, 10)){
+            return res
+                .status(403)
+                .send({
+                    error: "Not your account"
+                })
+        }
+
         try{
             const userTransactions =  await Transaction.findAll({
                 where: {
@@ -174,9 +261,18 @@ module.exports.initRoutes = (app) => {
                         { recipientId: userId }
                     ]
                 },
+                order: [
+                    [sortName, sortDir]
+                ],
+                include: [
+                    {
+                        as: 'sender',
+                        model: User,
+                        attributes: ["id", "nickname"]
+                    }
+                ],
             })
-            res.send({
-                data: userTransactions})
+            res.send(userTransactions)
         }catch (e){
             console.log(e)
         }
