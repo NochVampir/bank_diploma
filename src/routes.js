@@ -8,8 +8,23 @@ const passport = require("passport");
 const jwt = require('jsonwebtoken');
 const dayjs = require('dayjs');
 const jwtDecode = require("jwt-decode");
+const {uid} = require("uid");
 
 module.exports.initRoutes = (app) => {
+    app.post("/account/logout", passport.authenticate("jwt", {session: false}), async (req, res) => {
+        if(req.user?.id){
+            await User.update({
+                refresh: ''
+            }, {
+                where: {
+                    id: req.user.id
+                }
+            })
+
+            res.send({})
+        }
+    })
+
     app.get("/account/refresh", async (req, res) => {
         const {
             refreshToken
@@ -70,6 +85,7 @@ module.exports.initRoutes = (app) => {
             }
 
             req.login(user, {session: false}, async (err) => {
+                console.log(user)
                 if(err){
                     res
                         .status(500)
@@ -114,6 +130,7 @@ module.exports.initRoutes = (app) => {
             const hashPassword = await bcrypt.hash(payload.password, 10)
             const user = await User.create({
                 ...payload,
+                operationNumber: uid(12),
                 password: hashPassword
             })
             res
@@ -153,10 +170,34 @@ module.exports.initRoutes = (app) => {
 
     app.get("/account/details", passport.authenticate("jwt", {session: false}), async (req, res) => {
         const userDetails = await User.findByPk(req.user.id, {
-            attributes: ["id", "nickname", "amount", "createdAt"]
+            attributes: ["id", "nickname", "amount", "createdAt", "operationNumber"]
         })
 
         res.send(userDetails)
+    })
+
+    app.get("/account/last-activity", passport.authenticate("jwt", {session: false}), async (req, res) => {
+        const userId = req.user.id
+
+        try{
+            const operations = await Transaction.findAll({
+                where: {
+                    [Op.or]: [
+                        {senderId: userId},
+                        {recipientId: userId},
+                    ]
+                },
+                limit: 6
+            })
+
+            res.send(operations.map(operation => ({
+                type: operation.senderId === userId ? 'increase' : 'decrease',
+                value: operation.cost,
+            })))
+        }catch (e) {
+            console.log(e)
+            res.send(500)
+        }
     })
 
     app.post("/transactions", passport.authenticate("jwt", {session: false}), async (req, res) => {
@@ -164,7 +205,13 @@ module.exports.initRoutes = (app) => {
         const t = await db.transaction();
 
         try{
-            const senderUser = await User.findByPk(payload.senderId)
+            const senderUser = await User.findByPk(payload.senderId, {
+                lock: true,
+                transaction: t
+            })
+            if(!senderUser){
+                throw Error
+            }
             if(req.user.id !== senderUser?.id){
                 res
                     .status(403)
@@ -184,6 +231,8 @@ module.exports.initRoutes = (app) => {
 
             const transaction = await Transaction.create({
                 cost: payload.cost
+            }, {
+                transaction: t
             })
             transaction.setSender(req.body.senderId)
             transaction.setRecipient(req.body.recipientId)
@@ -194,15 +243,18 @@ module.exports.initRoutes = (app) => {
             await User.update({ amount: senderMoney.add(getMoneyObj(-payload.cost)).getAmount() }, {
                 where: {
                     id: payload.senderId
-                }
+                },
+                transaction: t
             });
 
             const recipeUser = await User.findByPk(payload.recipientId)
+            if(!recipeUser) throw Error
             const recipeMoney = getMoneyObj(+recipeUser.amount)
             await User.update({ amount: recipeMoney.add(transactionMoney).getAmount()}, {
                 where: {
                     id: payload.recipientId
-                }
+                },
+                transaction: t
             })
 
             await t.commit()
@@ -211,6 +263,25 @@ module.exports.initRoutes = (app) => {
             })
         }catch (e) {
             await t.rollback()
+            res
+                .status(500)
+                .send({})
+        }
+    })
+
+    app.get("/account/findByOperationNumber", passport.authenticate("jwt", {session: false}), async (req, res) => {
+        const {operationNumber} = req.query
+
+        try{
+            const user = await User.findOne({
+                where: {
+                    operationNumber
+                },
+                attributes: ["id"]
+            })
+
+            res.send(user)
+        }catch (e) {
             console.log(e)
         }
     })
@@ -269,6 +340,11 @@ module.exports.initRoutes = (app) => {
                         as: 'sender',
                         model: User,
                         attributes: ["id", "nickname"]
+                    },
+                    {
+                        as: 'recipient',
+                        model: User,
+                        attributes: ["id", "nickname"]
                     }
                 ],
             })
@@ -277,5 +353,4 @@ module.exports.initRoutes = (app) => {
             console.log(e)
         }
     })
-
 }

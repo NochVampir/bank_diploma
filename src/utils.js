@@ -2,7 +2,7 @@ const {createMoney} = require("@easymoney/money");
 
 module.exports.getMoneyObj = (money) => {
     return createMoney({
-        amount: money,
+        amount: Math.floor(money),
         currency: "USD"
     })
 }

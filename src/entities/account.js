@@ -7,6 +7,11 @@ const User = db.define('User', {
         allowNull: false,
         unique: true,
     },
+    operationNumber: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+    },
     password: {
         type: DataTypes.STRING,
         allowNull: false
@@ -17,7 +22,6 @@ const User = db.define('User', {
     },
     refresh: {
         type: DataTypes.STRING,
-        defaultValue: ''
     }
 })
 
