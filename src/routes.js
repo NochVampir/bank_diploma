@@ -85,7 +85,6 @@ module.exports.initRoutes = (app) => {
             }
 
             req.login(user, {session: false}, async (err) => {
-                console.log(user)
                 if(err){
                     res
                         .status(500)
@@ -206,7 +205,7 @@ module.exports.initRoutes = (app) => {
 
         try{
             const senderUser = await User.findByPk(payload.senderId, {
-                lock: true,
+                lock: t.LOCK.UPDATE,
                 transaction: t
             })
             if(!senderUser){
@@ -247,7 +246,10 @@ module.exports.initRoutes = (app) => {
                 transaction: t
             });
 
-            const recipeUser = await User.findByPk(payload.recipientId)
+            const recipeUser = await User.findByPk(payload.recipientId, {
+                lock: t.LOCK.UPDATE,
+                transaction: t
+            })
             if(!recipeUser) throw Error
             const recipeMoney = getMoneyObj(+recipeUser.amount)
             await User.update({ amount: recipeMoney.add(transactionMoney).getAmount()}, {
@@ -355,7 +357,7 @@ module.exports.initRoutes = (app) => {
     })
 
     app.put("/account/replenishment/", passport.authenticate("jwt", {session: false}), async (req, res) => {
-        const cost = getMoneyObj(req.params.cost)
+        const cost = getMoneyObj(req.body.cost)
         try {
             const user = await User.findByPk(req.user.id)
             const userAmount = getMoneyObj(+user.amount)
