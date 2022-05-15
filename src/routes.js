@@ -353,4 +353,21 @@ module.exports.initRoutes = (app) => {
             console.log(e)
         }
     })
+
+    app.put("/account/replenishment/", passport.authenticate("jwt", {session: false}), async (req, res) => {
+        const cost = getMoneyObj(req.params.cost)
+        try {
+            const user = await User.findByPk(req.user.id)
+            const userAmount = getMoneyObj(+user.amount)
+            await User.update({amount: userAmount.add(cost).getAmount()}, {
+                where: {
+                    id: req.user.id
+                }
+            });
+            res.send({})
+        }
+        catch(e){
+            console.log(e);
+        }
+    })
 }
