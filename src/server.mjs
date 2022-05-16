@@ -24,6 +24,8 @@ app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
+app.use(requireModule("express-status-monitor")())
+
 db.authenticate()
     .then(() => {
         console.log("DB is connected");
