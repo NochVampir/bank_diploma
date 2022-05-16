@@ -1,8 +1,8 @@
-const {  DataTypes } = require('sequelize');
-const {db} = require("../db");
-const {User} = require("./account");
+import {db} from '../db.mjs';
+import {DataTypes} from "sequelize";
+import {User} from "./account.mjs";
 
-const Transaction = db.define('Transaction',{
+export const Transaction = db.define('Transaction',{
     cost: {
         type: DataTypes.DOUBLE,
         defaultValue: 0
@@ -22,5 +22,3 @@ User.hasMany(Transaction, {
     as: 'receivedTransactions'
 })
 Transaction.sync({alter: true})
-
-module.exports.Transaction = Transaction

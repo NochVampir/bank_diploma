@@ -1,10 +1,9 @@
-const passport = require('passport');
-const {User} = require("./entities/account")
-const passportJWT = require("passport-jwt");
-const {compare} = require("bcrypt");
-const JWTStrategy = passportJWT.Strategy;
-const ExtractJWT = passportJWT.ExtractJwt;
-const LocalStrategy = require('passport-local').Strategy;
+import passport from "passport";
+import {Strategy as LocalStrategy} from "passport-local"
+import {Strategy as JWTStrategy} from "passport-jwt"
+import {ExtractJwt} from "passport-jwt";
+import {User} from "./entities/account.mjs";
+import {compare} from "bcrypt";
 
 passport.use(new LocalStrategy({
     usernameField: "nickname",
@@ -29,12 +28,11 @@ passport.use(new LocalStrategy({
 }))
 
 passport.use(new JWTStrategy({
-        jwtFromRequest: ExtractJWT.fromAuthHeaderAsBearerToken(),
+        jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
         secretOrKey : 'secret'
     },
     function (jwtPayload, cb) {
 
-        //find the user in db if needed. This functionality may be omitted if you store everything you'll need in JWT payload.
         return User.findOne({
             where: {
                 id: jwtPayload.id

@@ -1,6 +1,6 @@
-const {createMoney} = require("@easymoney/money");
+import {createMoney} from "@easymoney/money";
 
-module.exports.getMoneyObj = (money) => {
+export const getMoneyObj = (money) => {
     return createMoney({
         amount: Math.floor(money),
         currency: "USD"

@@ -1,0 +1,257 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "Bank Diploma",
+    "description": "Приложение для перевода средств"
+  },
+  "host": "http://localhost:3000",
+  "tags": [
+    {
+      "name": "Account",
+      "description": "api аккаунта"
+    },
+    {
+      "name": "Transactions",
+      "description": "api транзакций"
+    }
+  ],
+  "schemes": ["http"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "paths": {
+    "/login": {
+      "post": {
+        "tags": ["Account"],
+        "description": "Вход в систему с логином и паролем",
+        "parameters": [
+          {
+            "name": "nickname",
+            "required": true,
+            "type": "string",
+            "description": "Имя пользователя",
+            "in": "body"
+          },
+          {
+            "name": "password",
+            "required": true,
+            "type": "string",
+            "description": "Пароль",
+            "in": "body"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Успешный вход",
+            "schema": {
+              "$ref": "#/definitions/tokenResponse"
+            }
+          }
+        }
+      }
+    },
+    "/logout": {
+      "post": {
+        "tags": ["Account"],
+        "description": "Выход из аккаунта",
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/refresh": {
+      "post": {
+        "tags": ["Account"],
+        "description": "Обновление связки токенов",
+        "responses": {
+          "200": {
+            "schema": {
+              "$ref": "#/definitions/tokenResponse"
+            }
+          }
+        }
+      }
+    },
+    "/findByOperationNumber": {
+      "get": {
+        "tags": ["Account"],
+        "description": "Поиск аккаунта по номеру счета",
+        "parameters": [
+          {
+            "name": "operationNumber",
+            "required": true,
+            "description": "Номер счета пользователя",
+            "type": "string",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "schema": {
+              "properties": {
+                "id": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/details": {
+      "get": {
+        "tags": ["Account"],
+        "responses": {
+          "200": {
+            "schema": {
+              "$ref": "#/definitions/userDetailsResponse"
+            }
+          }
+        }
+      }
+    },
+    "/replenishment": {
+      "post": {
+        "tags": ["Account"],
+        "description": "Пополнение баланса",
+        "parameters": [
+          {
+            "name": "cost",
+            "in": "body",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успешное пополнение"
+          }
+        }
+      }
+    },
+    "/last-activity": {
+      "get": {
+        "tags": ["Account"],
+        "description": "Последняя активность пользователя",
+        "responses": {
+          "200": {
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/activityResponse"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/find": {
+      "get": {
+        "tags": ["Account"],
+        "description": "Поиск пользователей по username",
+        "parameters": [
+          {
+            "name": "q",
+            "type": "string",
+            "required": true,
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/userDetailsResponse"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/account": {
+      "post": {
+        "tags": ["Account"],
+        "description": "Создание нового аккаунта",
+        "parameters": [
+          {
+            "name": "nickname",
+            "required": true,
+            "type": "string",
+            "description": "Имя пользователя",
+            "in": "body"
+          },
+          {
+            "name": "password",
+            "required": true,
+            "type": "string",
+            "description": "Пароль",
+            "in": "body"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Успешный вход",
+            "schema": {
+              "properties": {
+                "dbUser": {
+                  "$ref": "#/definitions/userDetailsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "userDetailsResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "amount": {
+          "type": "string"
+        },
+        "nickname": {
+          "type": "string"
+        },
+        "operationNumber": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      }
+    },
+    "activityResponse": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "value": {
+          "type": "integer"
+        }
+      }
+    },
+    "tokenResponse": {
+      "type": "object",
+      "properties": {
+        "accessToken": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
-const {  DataTypes } = require('sequelize');
-const {db} = require("../db");
+import {db} from '../db.mjs'
+import {DataTypes} from "sequelize";
 
-const User = db.define('User', {
+export const User = db.define('User', {
     nickname: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -26,5 +26,3 @@ const User = db.define('User', {
 })
 
 User.sync({alter: true})
-
-module.exports.User = User
