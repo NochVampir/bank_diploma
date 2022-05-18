@@ -142,7 +142,9 @@ router.get("/:userId/list", passport.authenticate("jwt", {session: false}), asyn
                     attributes: ["id", "nickname"]
                 }
             ],
+            limit: 50
         })
+        console.log(userTransactions, userId, sortName, sortDir)
         res.send(userTransactions)
     }catch (e){
         console.log(e)
