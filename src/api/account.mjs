@@ -205,6 +205,9 @@ router.get("/last-activity", passport.authenticate("jwt", {session: false}), asy
                     {recipientId: userId},
                 ]
             },
+            order: [
+                ['createdAt', 'DESC']
+            ],
             limit: 6
         })
 
