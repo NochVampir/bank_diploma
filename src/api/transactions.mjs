@@ -1,7 +1,7 @@
 import passport from "passport";
 import {db} from "../db.mjs";
 import {User} from "../entities/account.mjs";
-import {Transaction} from "../entities/transaction.mjs";
+import {Transaction, TRANSACTIONS_TYPES} from "../entities/transaction.mjs";
 import {getMoneyObj} from "../utils.mjs";
 import {Op} from "sequelize";
 import express from "express";
@@ -39,7 +39,8 @@ router.post("/", passport.authenticate("jwt", {session: false}), async (req, res
         }
 
         const transaction = await Transaction.create({
-            cost: payload.cost
+            cost: payload.cost,
+            type: TRANSACTIONS_TYPES.MoneySend
         }, {
             transaction: t
         })

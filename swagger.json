@@ -113,7 +113,7 @@
         }
       }
     },
-    "/replenishment": {
+    "/replenis": {
       "post": {
         "tags": ["Account"],
         "description": "Пополнение баланса",

@@ -7,9 +7,10 @@ import bcrypt from "bcrypt";
 import {uid} from "uid";
 import {Op} from "sequelize";
 import {getMoneyObj} from "../utils.mjs";
-import {Transaction} from "../entities/transaction.mjs";
+import {Transaction, TRANSACTIONS_TYPES} from "../entities/transaction.mjs";
 import express from "express";
 import {accountMapper} from "../mappers/accountMapper.js";
+import {db} from "../db.mjs";
 
 const router = express.Router();
 
@@ -194,6 +195,17 @@ router.get("/details", passport.authenticate("jwt", {session: false}), async (re
     res.send(accountMapper(userDetails))
 })
 
+function getTransactionTypeName(type, isUserSender){
+    switch (type){
+        case TRANSACTIONS_TYPES.BalanceReplenish:
+            return "replenish";
+        default:
+        case TRANSACTIONS_TYPES.MoneySend:
+            if(isUserSender) return "increase"
+            return "decrease";
+    }
+}
+
 router.get("/last-activity", passport.authenticate("jwt", {session: false}), async (req, res) => {
     const userId = req.user.id
 
@@ -212,7 +224,7 @@ router.get("/last-activity", passport.authenticate("jwt", {session: false}), asy
         })
 
         res.send(operations.map(operation => ({
-            type: operation.senderId === userId ? 'increase' : 'decrease',
+            type: getTransactionTypeName(operation.type, operation.senderId === userId),
             value: operation.cost,
         })))
     }catch (e) {
@@ -221,19 +233,36 @@ router.get("/last-activity", passport.authenticate("jwt", {session: false}), asy
     }
 })
 
-router.put("/replenishment/", passport.authenticate("jwt", {session: false}), async (req, res) => {
+router.put("/replenish", passport.authenticate("jwt", {session: false}), async (req, res) => {
     const cost = getMoneyObj(req.body.cost)
+    const isRaceEnabled = req.query.isRaceEnabled;
+    const t = isRaceEnabled ? undefined : await db.transaction();
+    const userId = req.user.id;
+
     try {
-        const user = await User.findByPk(req.user.id)
+        const replenishTransaction = await Transaction.create({
+            cost: req.body.cost,
+            type: TRANSACTIONS_TYPES.BalanceReplenish
+        })
+        replenishTransaction.setSender(userId)
+        replenishTransaction.setRecipient(userId)
+
+        const user = await User.findByPk(userId, {
+            transaction: t,
+            lock: t.LOCK.UPDATE
+        })
         const userAmount = getMoneyObj(+user.amount)
         await User.update({amount: userAmount.add(cost).getAmount()}, {
             where: {
-                id: req.user.id
-            }
+                id: userId
+            },
+            transaction: t,
         });
+        await t.commit()
         res.send({})
     }
     catch(e){
+        await t.rollback()
         console.log(e);
     }
 })
